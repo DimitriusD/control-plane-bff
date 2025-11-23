@@ -1,11 +1,12 @@
 package com.example.controlplanebff.service;
 
-import com.example.controlplanebff.client.ControlPlaneClient;
-import com.example.controlplanebff.dto.domain.ExchangeDto;
-import com.example.controlplanebff.dto.domain.MarketSymbolDto;
-import com.example.controlplanebff.dto.ui.*;
+import com.example.controlplanebff.client.ControlPlaneApiClient;
+import com.example.controlplanebff.dto.DictionariesResponse;
+import com.example.controlplanebff.dto.PageResponse;
+import com.example.controlplanebff.dto.upstream.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -16,117 +17,93 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DictionariesService {
 
-    private final ControlPlaneClient controlPlaneClient;
+    private final ControlPlaneApiClient apiClient;
 
-    private static final List<String> FORECAST_LANES = List.of("PRICE_ONLY", "NEWS_AWARE");
-    private static final String DEFAULT_FORECAST_LANE = "PRICE_ONLY";
-    
-    private static final List<String> FORECAST_HORIZONS = List.of("5m", "15m", "1h", "1d");
-    private static final Map<String, List<String>> DEFAULT_HORIZONS_BY_ASSET_TYPE = Map.of(
-            "CRYPTO", List.of("5m", "15m", "1h"),
-            "EQUITY", List.of("1h", "1d")
-    );
-    
-    private static final List<String> BACKFILL_RESOLUTIONS = List.of("TICK", "SEC_1", "MIN_1", "MIN_5", "HOUR_1");
-    private static final String DEFAULT_BACKFILL_RESOLUTION = "MIN_1";
-    
-    private static final String DEFAULT_ASSET_TYPE = "CRYPTO";
-    private static final String DEFAULT_MARKET_TYPE = "SPOT";
+    @Value("${spring.application.name:control-plane-bff}")
+    private String applicationName;
+
+    @Value("${app.environment:local}")
+    private String environment;
 
     public DictionariesResponse getDictionaries() {
-        log.info("Building dictionaries for UI");
+        log.info("Building dictionaries from control-plane-service");
 
-        List<ExchangeDto> exchanges = controlPlaneClient.getExchanges();
-        List<MarketSymbolDto> allSymbols = controlPlaneClient.getMarketSymbols(null, null, null, null);
+        // Fetch all dictionary data from upstream
+        ItemsResponse<String> assetTypesResponse = apiClient.getAssetTypes();
+        ItemsResponse<String> marketTypesResponse = apiClient.getMarketTypes();
+        ItemsResponse<String> streamStatusesResponse = apiClient.getStreamStatuses();
+        ItemsResponse<RegionDto> regionsResponse = apiClient.getRegions();
+        ItemsResponse<WindowDto> windowsResponse = apiClient.getWindows();
+        ItemsResponse<ForecastTargetDto> forecastTargetsResponse = apiClient.getForecastTargets();
+        ItemsResponse<String> forecastHorizonsResponse = apiClient.getForecastHorizons();
+        ItemsResponse<ModelTypeDto> modelTypesResponse = apiClient.getModelTypes();
 
-        List<String> assetTypes = allSymbols.stream()
-                .map(MarketSymbolDto::getAssetType)
-                .filter(Objects::nonNull)
-                .distinct()
-                .sorted()
-                .toList();
+        // Get exchanges
+        PageResponse<ExchangeApiDto> exchangesPage = apiClient.getExchanges(0, 1000);
+        List<ExchangeApiDto> exchanges = exchangesPage.getItems() != null ? exchangesPage.getItems() : List.of();
 
-        List<ExchangeDictionaryItem> exchangeItems = new ArrayList<>();
+        // Get all market symbols to derive asset types per exchange
+        PageResponse<MarketSymbolApiDto> symbolsPage = apiClient.getMarketSymbols(
+                null, null, null, null, null, 0, 10000);
+        List<MarketSymbolApiDto> allSymbols = symbolsPage.getItems() != null ? symbolsPage.getItems() : List.of();
+
+        // Build exchange items with asset types
         Map<String, Set<String>> exchangeToAssetTypes = new HashMap<>();
-        Map<String, String> exchangeToDefaultMarketType = new HashMap<>();
-
-        for (MarketSymbolDto symbol : allSymbols) {
-            String exchangeCode = symbol.getExchange();
-            if (exchangeCode == null) continue;
-
-            exchangeToAssetTypes.computeIfAbsent(exchangeCode, k -> new HashSet<>())
-                    .add(symbol.getAssetType());
-
-            if (!exchangeToDefaultMarketType.containsKey(exchangeCode)) {
-                exchangeToDefaultMarketType.put(exchangeCode, symbol.getMarketType());
-            } else {
-                // Prefer SPOT for CRYPTO if available
-                if ("CRYPTO".equals(symbol.getAssetType()) && "SPOT".equals(symbol.getMarketType())) {
-                    exchangeToDefaultMarketType.put(exchangeCode, "SPOT");
-                }
+        for (MarketSymbolApiDto symbol : allSymbols) {
+            if (symbol.getExchangeCode() != null && symbol.getAssetType() != null) {
+                exchangeToAssetTypes.computeIfAbsent(symbol.getExchangeCode(), k -> new HashSet<>())
+                        .add(symbol.getAssetType());
             }
         }
 
-        // Build exchange items
-        for (ExchangeDto exchange : exchanges) {
-            Set<String> supportedAssetTypes = exchangeToAssetTypes.getOrDefault(exchange.getCode(), new HashSet<>());
-            String defaultMarketType = exchangeToDefaultMarketType.getOrDefault(exchange.getCode(), "SPOT");
+        List<DictionariesResponse.ExchangeItem> exchangeItems = exchanges.stream()
+                .map(exchange -> DictionariesResponse.ExchangeItem.builder()
+                        .code(exchange.getCode())
+                        .name(exchange.getName())
+                        .assetTypes(new ArrayList<>(exchangeToAssetTypes.getOrDefault(
+                                exchange.getCode(), new HashSet<>())))
+                        .build())
+                .collect(Collectors.toList());
 
-            ExchangeDictionaryItem item = ExchangeDictionaryItem.builder()
-                    .code(exchange.getCode())
-                    .name(exchange.getName())
-                    .supportedAssetTypes(new ArrayList<>(supportedAssetTypes))
-                    .defaultMarketType(defaultMarketType)
-                    .build();
+        // Extract codes from complex DTOs
+        List<String> regions = regionsResponse.getItems() != null
+                ? regionsResponse.getItems().stream()
+                        .map(RegionDto::getCode)
+                        .collect(Collectors.toList())
+                : List.of();
 
-            exchangeItems.add(item);
-        }
+        List<String> windows = windowsResponse.getItems() != null
+                ? windowsResponse.getItems().stream()
+                        .filter(w -> w.getEnabled() != null && w.getEnabled())
+                        .map(WindowDto::getCode)
+                        .collect(Collectors.toList())
+                : List.of();
 
-        // Build market types from symbols
-        List<String> marketTypes = allSymbols.stream()
-                .map(MarketSymbolDto::getMarketType)
-                .filter(Objects::nonNull).distinct().sorted().collect(Collectors.toList());
+        List<String> forecastTargets = forecastTargetsResponse.getItems() != null
+                ? forecastTargetsResponse.getItems().stream()
+                        .map(ForecastTargetDto::getCode)
+                        .collect(Collectors.toList())
+                : List.of();
 
-        // Determine default exchange (first CRYPTO exchange, or first exchange)
-        String defaultExchange = exchangeItems.stream()
-                .filter(e -> e.getSupportedAssetTypes().contains(DEFAULT_ASSET_TYPE))
-                .map(ExchangeDictionaryItem::getCode)
-                .findFirst()
-                .orElse(exchangeItems.isEmpty() ? null : exchangeItems.getFirst().getCode());
-
-        log.info("Built dictionaries - assetTypes: {}, exchanges: {}, defaultExchange: {}", 
-                assetTypes.size(), exchangeItems.size(), defaultExchange);
+        List<String> modelTypes = modelTypesResponse.getItems() != null
+                ? modelTypesResponse.getItems().stream()
+                        .map(ModelTypeDto::getCode)
+                        .collect(Collectors.toList())
+                : List.of();
 
         return DictionariesResponse.builder()
-                .assetTypes(AssetTypesDictionary.builder()
-                        .items(assetTypes)
-                        .default_(DEFAULT_ASSET_TYPE)
-                        .build())
-                .exchanges(ExchangesDictionary.builder()
-                        .items(exchangeItems)
-                        .build())
-                .marketTypes(MarketTypesDictionary.builder()
-                        .items(marketTypes)
-                        .build())
-                .forecastLanes(ForecastLanesDictionary.builder()
-                        .items(FORECAST_LANES)
-                        .default_(DEFAULT_FORECAST_LANE)
-                        .build())
-                .forecastHorizons(ForecastHorizonsDictionary.builder()
-                        .items(FORECAST_HORIZONS)
-                        .defaultsByAssetType(DEFAULT_HORIZONS_BY_ASSET_TYPE)
-                        .build())
-                .backfillResolutions(BackfillResolutionsDictionary.builder()
-                        .items(BACKFILL_RESOLUTIONS)
-                        .default_(DEFAULT_BACKFILL_RESOLUTION)
-                        .build())
-                .defaults(DefaultsDictionary.builder()
-                        .assetType(DEFAULT_ASSET_TYPE)
-                        .exchange(defaultExchange)
-                        .marketType(DEFAULT_MARKET_TYPE)
-                        .build())
+                .environment(environment)
+                .status("OK")
+                .assetTypes(assetTypesResponse.getItems() != null ? assetTypesResponse.getItems() : List.of())
+                .exchanges(exchangeItems)
+                .marketTypes(marketTypesResponse.getItems() != null ? marketTypesResponse.getItems() : List.of())
+                .regions(regions)
+                .windows(windows)
+                .streamStates(streamStatusesResponse.getItems() != null ? streamStatusesResponse.getItems() : List.of())
+                .forecastTargets(forecastTargets)
+                .forecastHorizons(forecastHorizonsResponse.getItems() != null ? forecastHorizonsResponse.getItems() : List.of())
+                .modelTypes(modelTypes)
                 .build();
     }
 }
-
 

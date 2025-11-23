@@ -11,7 +11,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 import java.time.Instant;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @ControllerAdvice
 @Slf4j
@@ -78,16 +77,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleWebClientResponseException(
             WebClientResponseException ex, HttpServletRequest request) {
         
-        HttpStatus status = ex.getStatusCode().is4xxClientError() 
-                ? HttpStatus.BAD_GATEWAY 
-                : HttpStatus.INTERNAL_SERVER_ERROR;
+        // For 4xx from upstream, return the same status code to frontend
+        // For 5xx from upstream, return 502 Bad Gateway
+        HttpStatus status;
+        if (ex.getStatusCode().is4xxClientError()) {
+            status = HttpStatus.valueOf(ex.getStatusCode().value());
+        } else {
+            status = HttpStatus.BAD_GATEWAY;
+        }
 
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(Instant.now())
                 .path(request.getRequestURI())
                 .status(status.value())
                 .error(status.getReasonPhrase())
-                .message("Error from control-plane-service: " + ex.getMessage())
+                .message("Control Plane Service error: " + ex.getMessage())
                 .details(List.of())
                 .build();
 
@@ -99,13 +103,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRuntimeException(
             RuntimeException ex, HttpServletRequest request) {
         
-        if (ex.getMessage() != null && ex.getMessage().contains("control-plane-service")) {
+        if (ex.getMessage() != null && 
+            (ex.getMessage().contains("control-plane-service") || 
+             ex.getMessage().contains("Failed to call control-plane-service"))) {
             ErrorResponse errorResponse = ErrorResponse.builder()
                     .timestamp(Instant.now())
                     .path(request.getRequestURI())
                     .status(HttpStatus.BAD_GATEWAY.value())
                     .error("Bad Gateway")
-                    .message(ex.getMessage())
+                    .message("Control Plane Service unavailable: " + ex.getMessage())
                     .details(List.of())
                     .build();
 
