@@ -51,7 +51,8 @@ jib {
         image = 'eclipse-temurin:21-jre-alpine'
     }
     to {
-        image = 'control-plane-bff:latest'
+        image = 'dimakovbasa/control-plane-bff'
+        tags = ['latest']
     }
     container {
         ports = ['8086']

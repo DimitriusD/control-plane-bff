@@ -1,0 +1,30 @@
+name: Build & Push control-plane-bff Docker image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build & push Docker image with Jib
+        env:
+          JIB_TO_AUTH_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          JIB_TO_AUTH_PASSWORD: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: ./gradlew :jib
