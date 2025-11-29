@@ -16,7 +16,6 @@ public class MockStreamsService {
     private final Map<String, StreamDto> streams = new ConcurrentHashMap<>();
 
     public MockStreamsService() {
-        // Initialize with some mock streams
         initializeMockData();
     }
 
@@ -123,35 +122,30 @@ public class MockStreamsService {
 
         List<StreamDto> filtered = new ArrayList<>(streams.values());
 
-        // Filter by kind (required)
         if (kind != null) {
             filtered = filtered.stream()
                     .filter(s -> kind.equals(s.getKind()))
                     .collect(Collectors.toList());
         }
 
-        // Filter by status
         if (status != null && !status.isBlank()) {
             filtered = filtered.stream()
                     .filter(s -> status.equals(s.getStatus()))
                     .collect(Collectors.toList());
         }
 
-        // Filter by exchange
         if (exchange != null && !exchange.isBlank()) {
             filtered = filtered.stream()
                     .filter(s -> exchange.equals(s.getExchange()))
                     .collect(Collectors.toList());
         }
 
-        // Filter by assetType
         if (assetType != null && !assetType.isBlank()) {
             filtered = filtered.stream()
                     .filter(s -> assetType.equals(s.getAssetType()))
                     .collect(Collectors.toList());
         }
 
-        // Filter by search
         if (search != null && !search.isBlank()) {
             String searchLower = search.toLowerCase();
             filtered = filtered.stream()
@@ -161,7 +155,6 @@ public class MockStreamsService {
                     .collect(Collectors.toList());
         }
 
-        // Pagination
         int pageNum = page != null && page >= 0 ? page : 0;
         int sizeNum = size != null && size > 0 ? size : 20;
         int start = pageNum * sizeNum;
@@ -184,7 +177,6 @@ public class MockStreamsService {
         log.info("Getting stream stats: kind={}, status={}, exchange={}, assetType={}", 
                 kind, status, exchange, assetType);
 
-        // Get filtered streams (reuse filtering logic)
         PageResponse<StreamDto> filtered = listStreams(kind, status, exchange, assetType, search, 0, Integer.MAX_VALUE);
         
         List<StreamDto> allStreams = filtered.getItems();
@@ -310,7 +302,6 @@ public class MockStreamsService {
             return StreamMetricsResponse.builder().points(List.of()).build();
         }
 
-        // Generate mock time series
         List<MetricPoint> points = new ArrayList<>();
         Instant current = from != null ? from : Instant.now().minusSeconds(3600);
         Instant end = to != null ? to : Instant.now();
@@ -319,7 +310,6 @@ public class MockStreamsService {
         int baseLagMs = stream.getAvgLagMs() != null ? stream.getAvgLagMs() : 120;
 
         while (current.isBefore(end) && points.size() < 100) {
-            // Add some random jitter
             double messagesPerSec = baseMessagesPerSec + (Math.random() - 0.5) * 50;
             int avgLagMs = baseLagMs + (int) ((Math.random() - 0.5) * 40);
             double errorRate = Math.random() * 0.005;
@@ -331,7 +321,7 @@ public class MockStreamsService {
                     .errorRate(errorRate)
                     .build());
 
-            current = current.plusSeconds(60); // 1-minute steps
+            current = current.plusSeconds(60);
         }
 
         return StreamMetricsResponse.builder()

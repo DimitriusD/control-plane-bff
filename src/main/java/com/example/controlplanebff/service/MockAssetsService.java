@@ -10,7 +10,6 @@ import java.util.*;
 @Slf4j
 public class MockAssetsService {
 
-    // Mock data: exchange + marketType -> base assets
     private static final Map<String, List<String>> BASE_ASSETS = Map.of(
             "BINANCE_SPOT", List.of("BTC", "ETH", "XRP", "SOL", "BNB", "ADA", "DOGE", "DOT"),
             "BINANCE_FUTURES_PERP", List.of("BTC", "ETH", "SOL", "BNB"),
@@ -19,7 +18,6 @@ public class MockAssetsService {
             "CME_FUTURES_DELIVERY", List.of("BTC", "ETH")
     );
 
-    // Mock data: exchange + marketType + baseAsset -> quote assets
     private static final Map<String, List<String>> QUOTE_ASSETS = Map.of(
             "BINANCE_SPOT_BTC", List.of("USDT", "FDUSD", "TRY", "BRL", "EUR", "GBP"),
             "BINANCE_SPOT_ETH", List.of("USDT", "FDUSD", "BTC", "EUR"),

@@ -13,9 +13,6 @@ app:
 control-plane:
   api-base-url: http://localhost:8085/api/cp/v1
 
-market-live-stream-gateway:
-  ws-base-url: ws://localhost:8090/ws/md/v1/streams
-
 management:
   endpoints:
     web:

@@ -20,7 +20,6 @@ public class ControlPlaneApiClient {
 
     private final WebClient controlPlaneApiWebClient;
 
-    // Dictionary endpoints
     public ItemsResponse<String> getAssetTypes() {
         return callGet("/asset-types", new ParameterizedTypeReference<ItemsResponse<String>>() {});
     }
@@ -91,7 +90,6 @@ public class ControlPlaneApiClient {
         ), new ParameterizedTypeReference<PageResponse<SymbolItem>>() {});
     }
 
-    // Streams endpoints (proxy)
     public PageResponse<StreamDto> getStreams(String kind, String status, String exchange,
                                                String assetType, String search,
                                                Integer page, Integer size) {
@@ -124,7 +122,6 @@ public class ControlPlaneApiClient {
                 new ParameterizedTypeReference<StreamMetricsResponse>() {});
     }
 
-    // Backfill Jobs endpoints (proxy)
     public PageResponse<BackfillJobDto> getBackfillJobs(String exchange, String marketType, String assetType,
                                                         String symbol, String status, String search,
                                                         Integer page, Integer size) {
@@ -149,7 +146,6 @@ public class ControlPlaneApiClient {
         return callPatch("/backfill-jobs/" + jobId, request, new ParameterizedTypeReference<BackfillJobDto>() {});
     }
 
-    // Forecast Configs endpoints (proxy)
     public PageResponse<ForecastConfigDto> getForecastConfigs(String exchange, String marketType, String assetType,
                                                                String symbol, String horizon, Boolean enabled,
                                                                String search, Integer page, Integer size) {
@@ -174,7 +170,6 @@ public class ControlPlaneApiClient {
         return callPatch("/forecast-configs/" + configId, request, new ParameterizedTypeReference<ForecastConfigDto>() {});
     }
 
-    // Helper methods
     private <T> T callGet(String path, ParameterizedTypeReference<T> typeRef) {
         long startTime = System.currentTimeMillis();
         try {

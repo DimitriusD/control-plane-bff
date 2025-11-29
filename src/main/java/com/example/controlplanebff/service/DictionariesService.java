@@ -28,7 +28,6 @@ public class DictionariesService {
     public DictionariesResponse getDictionaries() {
         log.info("Building dictionaries from control-plane-service");
 
-        // Fetch all dictionary data from upstream
         ItemsResponse<String> assetTypesResponse = apiClient.getAssetTypes();
         ItemsResponse<String> marketTypesResponse = apiClient.getMarketTypes();
         ItemsResponse<String> streamStatusesResponse = apiClient.getStreamStatuses();
@@ -38,16 +37,13 @@ public class DictionariesService {
         ItemsResponse<String> forecastHorizonsResponse = apiClient.getForecastHorizons();
         ItemsResponse<ModelTypeDto> modelTypesResponse = apiClient.getModelTypes();
 
-        // Get exchanges
         PageResponse<ExchangeApiDto> exchangesPage = apiClient.getExchanges(0, 1000);
         List<ExchangeApiDto> exchanges = exchangesPage.getItems() != null ? exchangesPage.getItems() : List.of();
 
-        // Get all market symbols to derive asset types per exchange
         PageResponse<MarketSymbolApiDto> symbolsPage = apiClient.getMarketSymbols(
                 null, null, null, null, null, 0, 10000);
         List<MarketSymbolApiDto> allSymbols = symbolsPage.getItems() != null ? symbolsPage.getItems() : List.of();
 
-        // Build exchange items with asset types
         Map<String, Set<String>> exchangeToAssetTypes = new HashMap<>();
         for (MarketSymbolApiDto symbol : allSymbols) {
             if (symbol.getExchangeCode() != null && symbol.getAssetType() != null) {
@@ -65,7 +61,6 @@ public class DictionariesService {
                         .build())
                 .collect(Collectors.toList());
 
-        // Extract codes from complex DTOs
         List<String> regions = regionsResponse.getItems() != null
                 ? regionsResponse.getItems().stream()
                         .map(RegionDto::getCode)

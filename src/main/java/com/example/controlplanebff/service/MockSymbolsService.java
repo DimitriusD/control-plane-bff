@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MockSymbolsService {
 
-    // Mock symbols database
     private static final List<SymbolItem> ALL_SYMBOLS = List.of(
             SymbolItem.builder().symbol("BTCUSDT").base("BTC").quote("USDT").build(),
             SymbolItem.builder().symbol("BTCEUR").base("BTC").quote("EUR").build(),
@@ -35,7 +34,6 @@ public class MockSymbolsService {
 
         List<SymbolItem> filtered = new ArrayList<>(ALL_SYMBOLS);
 
-        // Filter by search (case-insensitive substring)
         if (search != null && !search.isBlank()) {
             String searchLower = search.toLowerCase();
             filtered = filtered.stream()
@@ -45,14 +43,12 @@ public class MockSymbolsService {
                     .collect(Collectors.toList());
         }
 
-        // Filter by base
         if (base != null && !base.isBlank()) {
             filtered = filtered.stream()
                     .filter(s -> base.equalsIgnoreCase(s.getBase()))
                     .collect(Collectors.toList());
         }
 
-        // Pagination
         int pageNum = page != null && page >= 0 ? page : 0;
         int sizeNum = size != null && size > 0 ? size : 20;
         int start = pageNum * sizeNum;

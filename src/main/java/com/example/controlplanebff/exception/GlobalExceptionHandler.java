@@ -77,8 +77,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleWebClientResponseException(
             WebClientResponseException ex, HttpServletRequest request) {
         
-        // For 4xx from upstream, return the same status code to frontend
-        // For 5xx from upstream, return 502 Bad Gateway
         HttpStatus status;
         if (ex.getStatusCode().is4xxClientError()) {
             status = HttpStatus.valueOf(ex.getStatusCode().value());

@@ -129,7 +129,6 @@ public class MockBackfillJobsService {
                     .collect(Collectors.toList());
         }
 
-        // Pagination
         int pageNum = page != null && page >= 0 ? page : 0;
         int sizeNum = size != null && size > 0 ? size : 20;
         int start = pageNum * sizeNum;
