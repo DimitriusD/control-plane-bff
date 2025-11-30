@@ -3,7 +3,7 @@ name: Build & Push control-plane-bff Docker image
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:
