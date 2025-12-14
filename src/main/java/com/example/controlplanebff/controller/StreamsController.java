@@ -18,17 +18,20 @@ public class StreamsController {
     private final StreamsService streamsService;
 
     @GetMapping("/streams")
-    public ResponseEntity<PageResponse<StreamDto>> listStreams(
+    public ResponseEntity<PageResponse<StreamGroupDto>> listStreams(
             @RequestParam(required = true) String kind,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String exchange,
             @RequestParam(required = false) String assetType,
+            @RequestParam(required = false) String marketType,
+            @RequestParam(required = false) String region,
+            @RequestParam(required = false) String window,
             @RequestParam(required = false) String search,
             @RequestParam(required = false, defaultValue = "0") Integer page,
             @RequestParam(required = false, defaultValue = "20") Integer size) {
         
-        PageResponse<StreamDto> response = streamsService.listStreams(
-                kind, status, exchange, assetType, search, page, size);
+        PageResponse<StreamGroupDto> response = streamsService.listStreams(
+                kind, status, exchange, assetType, marketType, region, window, search, page, size);
         return ResponseEntity.ok(response);
     }
 
@@ -46,8 +49,8 @@ public class StreamsController {
     }
 
     @GetMapping("/streams/{streamId}")
-    public ResponseEntity<StreamDto> getStream(@PathVariable String streamId) {
-        StreamDto stream = streamsService.getStream(streamId);
+    public ResponseEntity<StreamGroupDto> getStream(@PathVariable String streamId) {
+        StreamGroupDto stream = streamsService.getStream(streamId);
         if (stream == null) {
             return ResponseEntity.notFound().build();
         }
@@ -55,17 +58,17 @@ public class StreamsController {
     }
 
     @PostMapping("/streams")
-    public ResponseEntity<StreamDto> createStream(@Valid @RequestBody CreateStreamRequest request) {
-        StreamDto stream = streamsService.createStream(request);
+    public ResponseEntity<StreamGroupDto> createStream(@Valid @RequestBody CreateStreamRequest request) {
+        StreamGroupDto stream = streamsService.createStream(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(stream);
     }
 
     @PatchMapping("/streams/{streamId}")
-    public ResponseEntity<StreamDto> updateStreamState(
+    public ResponseEntity<StreamGroupDto> updateStreamState(
             @PathVariable String streamId,
             @Valid @RequestBody UpdateStreamStateRequest request) {
         
-        StreamDto stream = streamsService.updateStreamState(streamId, request);
+        StreamGroupDto stream = streamsService.updateStreamState(streamId, request);
         if (stream == null) {
             return ResponseEntity.notFound().build();
         }

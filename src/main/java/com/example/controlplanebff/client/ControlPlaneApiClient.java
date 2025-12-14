@@ -90,31 +90,32 @@ public class ControlPlaneApiClient {
         ), new ParameterizedTypeReference<PageResponse<SymbolItem>>() {});
     }
 
-    public PageResponse<StreamDto> getStreams(String kind, String status, String exchange,
-                                               String assetType, String search,
-                                               Integer page, Integer size) {
+    public PageResponse<StreamGroupDto> getStreams(String kind, String status, String exchange,
+                                                    String assetType, String marketType, String region,
+                                                    String window, String search,
+                                                    Integer page, Integer size) {
         return callGetWithQuery("/streams", buildStreamsQueryParams(
-                kind, status, exchange, assetType, search, page, size
-        ), new ParameterizedTypeReference<PageResponse<StreamDto>>() {});
+                kind, status, exchange, assetType, marketType, region, window, search, page, size
+        ), new ParameterizedTypeReference<PageResponse<StreamGroupDto>>() {});
     }
 
     public StreamStatsResponse getStreamStats(String kind, String status, String exchange,
                                               String assetType, String search) {
         return callGetWithQuery("/streams/stats", buildStreamsQueryParams(
-                kind, status, exchange, assetType, search, null, null
+                kind, status, exchange, assetType, null, null, null, search, null, null
         ), new ParameterizedTypeReference<StreamStatsResponse>() {});
     }
 
-    public StreamDto getStream(String streamId) {
-        return callGet("/streams/" + streamId, new ParameterizedTypeReference<StreamDto>() {});
+    public StreamGroupDto getStream(String streamId) {
+        return callGet("/streams/" + streamId, new ParameterizedTypeReference<StreamGroupDto>() {});
     }
 
-    public StreamDto createStream(CreateStreamRequest request) {
-        return callPost("/streams", request, new ParameterizedTypeReference<StreamDto>() {});
+    public StreamGroupDto createStream(CreateStreamRequest request) {
+        return callPost("/streams", request, new ParameterizedTypeReference<StreamGroupDto>() {});
     }
 
-    public StreamDto updateStreamState(String streamId, UpdateStreamStateRequest request) {
-        return callPatch("/streams/" + streamId, request, new ParameterizedTypeReference<StreamDto>() {});
+    public StreamGroupDto updateStreamState(String streamId, UpdateStreamStateRequest request) {
+        return callPatch("/streams/" + streamId, request, new ParameterizedTypeReference<StreamGroupDto>() {});
     }
 
     public StreamMetricsResponse getStreamMetrics(String streamId, Instant from, Instant to) {
@@ -186,7 +187,12 @@ public class ControlPlaneApiClient {
             return result;
         } catch (WebClientResponseException e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("GET {} - Error {} after {}ms: {}", path, e.getStatusCode(), duration, e.getMessage());
+            String responseBody = e.getResponseBodyAsString();
+            log.error("GET {} - Error {} after {}ms: {} | Response: {}", 
+                    path, e.getStatusCode(), duration, e.getMessage(), 
+                    responseBody != null && responseBody.length() > 500 
+                            ? responseBody.substring(0, 500) + "..." 
+                            : responseBody);
             throw e;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
@@ -219,7 +225,12 @@ public class ControlPlaneApiClient {
             return result;
         } catch (WebClientResponseException e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("GET {} - Error {} after {}ms: {}", path, e.getStatusCode(), duration, e.getMessage());
+            String responseBody = e.getResponseBodyAsString();
+            log.error("GET {} - Error {} after {}ms: {} | Response: {}", 
+                    path, e.getStatusCode(), duration, e.getMessage(), 
+                    responseBody != null && responseBody.length() > 500 
+                            ? responseBody.substring(0, 500) + "..." 
+                            : responseBody);
             throw e;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
@@ -245,7 +256,12 @@ public class ControlPlaneApiClient {
             return result;
         } catch (WebClientResponseException e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("POST {} - Error {} after {}ms: {}", path, e.getStatusCode(), duration, e.getMessage());
+            String responseBody = e.getResponseBodyAsString();
+            log.error("POST {} - Error {} after {}ms: {} | Response: {}", 
+                    path, e.getStatusCode(), duration, e.getMessage(), 
+                    responseBody != null && responseBody.length() > 500 
+                            ? responseBody.substring(0, 500) + "..." 
+                            : responseBody);
             throw e;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
@@ -271,7 +287,12 @@ public class ControlPlaneApiClient {
             return result;
         } catch (WebClientResponseException e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("PUT {} - Error {} after {}ms: {}", path, e.getStatusCode(), duration, e.getMessage());
+            String responseBody = e.getResponseBodyAsString();
+            log.error("PUT {} - Error {} after {}ms: {} | Response: {}", 
+                    path, e.getStatusCode(), duration, e.getMessage(), 
+                    responseBody != null && responseBody.length() > 500 
+                            ? responseBody.substring(0, 500) + "..." 
+                            : responseBody);
             throw e;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
@@ -297,7 +318,12 @@ public class ControlPlaneApiClient {
             return result;
         } catch (WebClientResponseException e) {
             long duration = System.currentTimeMillis() - startTime;
-            log.error("PATCH {} - Error {} after {}ms: {}", path, e.getStatusCode(), duration, e.getMessage());
+            String responseBody = e.getResponseBodyAsString();
+            log.error("PATCH {} - Error {} after {}ms: {} | Response: {}", 
+                    path, e.getStatusCode(), duration, e.getMessage(), 
+                    responseBody != null && responseBody.length() > 500 
+                            ? responseBody.substring(0, 500) + "..." 
+                            : responseBody);
             throw e;
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
@@ -332,12 +358,16 @@ public class ControlPlaneApiClient {
     }
 
     private Map<String, String> buildStreamsQueryParams(String kind, String status, String exchange,
-                                                         String assetType, String search, Integer page, Integer size) {
+                                                         String assetType, String marketType, String region,
+                                                         String window, String search, Integer page, Integer size) {
         Map<String, String> params = new java.util.HashMap<>();
         if (kind != null) params.put("kind", kind);
         if (status != null) params.put("status", status);
         if (exchange != null) params.put("exchange", exchange);
         if (assetType != null) params.put("assetType", assetType);
+        if (marketType != null) params.put("marketType", marketType);
+        if (region != null) params.put("region", region);
+        if (window != null) params.put("window", window);
         if (search != null) params.put("search", search);
         if (page != null) params.put("page", page.toString());
         if (size != null) params.put("size", size.toString());

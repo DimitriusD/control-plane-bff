@@ -84,16 +84,31 @@ public class GlobalExceptionHandler {
             status = HttpStatus.BAD_GATEWAY;
         }
 
+        String responseBody = ex.getResponseBodyAsString();
+        String responseSnippet = responseBody != null && responseBody.length() > 0
+                ? (responseBody.length() > 500 ? responseBody.substring(0, 500) + "..." : responseBody)
+                : null;
+        
+        String upstreamPath = ex.getRequest() != null && ex.getRequest().getURI() != null
+                ? ex.getRequest().getURI().toString()
+                : "unknown";
+
+        List<String> details = List.of(
+                "Upstream path: " + upstreamPath,
+                responseSnippet != null ? "Response: " + responseSnippet : "No response body"
+        );
+
         ErrorResponse errorResponse = ErrorResponse.builder()
                 .timestamp(Instant.now())
                 .path(request.getRequestURI())
                 .status(status.value())
                 .error(status.getReasonPhrase())
                 .message("Control Plane Service error: " + ex.getMessage())
-                .details(List.of())
+                .details(details)
                 .build();
 
-        log.error("Error from control-plane-service on {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+        log.error("Error from control-plane-service on {} (upstream: {}): {} | Response: {}", 
+                request.getRequestURI(), upstreamPath, ex.getMessage(), responseSnippet, ex);
         return ResponseEntity.status(status).body(errorResponse);
     }
 

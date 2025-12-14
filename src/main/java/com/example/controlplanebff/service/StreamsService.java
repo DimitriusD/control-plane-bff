@@ -15,12 +15,13 @@ public class StreamsService {
 
     private final ControlPlaneApiClient apiClient;
 
-    public PageResponse<StreamDto> listStreams(String kind, String status, String exchange,
-                                               String assetType, String search,
-                                               Integer page, Integer size) {
-        log.info("Listing streams: kind={}, status={}, exchange={}, assetType={}, search={}", 
-                kind, status, exchange, assetType, search);
-        return apiClient.getStreams(kind, status, exchange, assetType, search, page, size);
+    public PageResponse<StreamGroupDto> listStreams(String kind, String status, String exchange,
+                                                     String assetType, String marketType, String region,
+                                                     String window, String search,
+                                                     Integer page, Integer size) {
+        log.info("Listing streams: kind={}, status={}, exchange={}, assetType={}, marketType={}, region={}, window={}, search={}", 
+                kind, status, exchange, assetType, marketType, region, window, search);
+        return apiClient.getStreams(kind, status, exchange, assetType, marketType, region, window, search, page, size);
     }
 
     public StreamStatsResponse getStats(String kind, String status, String exchange,
@@ -30,17 +31,17 @@ public class StreamsService {
         return apiClient.getStreamStats(kind, status, exchange, assetType, search);
     }
 
-    public StreamDto getStream(String streamId) {
+    public StreamGroupDto getStream(String streamId) {
         log.info("Getting stream: {}", streamId);
         return apiClient.getStream(streamId);
     }
 
-    public StreamDto createStream(CreateStreamRequest request) {
+    public StreamGroupDto createStream(CreateStreamRequest request) {
         log.info("Creating stream: kind={}, exchange={}", request.getKind(), request.getExchange());
         return apiClient.createStream(request);
     }
 
-    public StreamDto updateStreamState(String streamId, UpdateStreamStateRequest request) {
+    public StreamGroupDto updateStreamState(String streamId, UpdateStreamStateRequest request) {
         log.info("Updating stream state: streamId={}, desiredState={}", streamId, request.getDesiredState());
         return apiClient.updateStreamState(streamId, request);
     }
