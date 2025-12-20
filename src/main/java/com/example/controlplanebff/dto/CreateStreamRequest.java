@@ -20,6 +20,7 @@ public class CreateStreamRequest {
     private String quoteAsset;
     private String region;
     private String window;
+    private List<String> channels;
     private Boolean autoStart;
     
     // NEWS-specific fields
